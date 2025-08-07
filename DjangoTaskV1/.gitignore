@@ -13,7 +13,7 @@ staticfiles/
 .venv
 env
 
-.idea
+/.idea
 /static
 # Byte-compiled / optimized / DLL files
 __pycache__/
