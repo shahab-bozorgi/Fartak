@@ -14,9 +14,30 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-# from django.contrib import admin
-from django.urls import path
+from django.contrib import admin
+from django.template.context_processors import static
+from django.urls import path, include
+from django.views.generic import TemplateView
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+
+from DjangoTaskV1 import settings
 
 urlpatterns = [
-    #    path('admin/', admin.site.urls),
+    path('admin/', admin.site.urls),
+    path('documents/', include('documents.urls')),
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path(
+        'api/swagger/',
+        SpectacularSwaggerView.as_view(url_name='schema'),
+        name='swagger-ui',
+    ),
+    path(
+        'api/swagger.yaml',
+        TemplateView.as_view(
+            template_name='Swagger/swagger.yaml',
+            content_type='application/yaml',
+        ),
+        name='swagger-yaml',
+    ),
+
 ]

@@ -20,7 +20,7 @@ class DocumentCategory (models.Model):
     company = models.IntegerField()
     participant = models.ForeignKey(Participant, on_delete=models.CASCADE)
     title = models.CharField(max_length=100)
-    is_deleted = models.BooleanField()
+    is_deleted = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.company} {self.participant} {self.title}"
@@ -31,17 +31,19 @@ class DocumentType(models.Model):
     private_visible = models.BooleanField()
     public_visible = models.BooleanField()
     is_active = models.BooleanField()
-    is_deleted = models.BooleanField()
+    is_deleted = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.category} {self.title}"
+
+
 class Document(models.Model):
     company = models.IntegerField()
     participant = models.ForeignKey(Participant, on_delete=models.CASCADE)
     document_type = models.ForeignKey(DocumentType, on_delete=models.CASCADE)
     file = models.FileField()
     is_active = models.BooleanField()
-    is_deleted = models.BooleanField()
+    is_deleted = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.company} {self.participant} {self.document_type}"
