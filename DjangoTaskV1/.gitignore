@@ -13,7 +13,6 @@ staticfiles/
 .venv
 env
 
-/.idea
 ../.README.md.swp
 
 /static
