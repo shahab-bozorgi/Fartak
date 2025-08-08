@@ -1,8 +1,8 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
-
-from .models import DocumentCategory, DocumentType, Document
+from PyPDF2 import PdfReader
+from .models import DocumentCategory, DocumentType, Document, UploadedTextFile
 from .serializers import DocumentCategorySerializer, DocumentTypeSerializer, DocumentSerializer
 
 
@@ -11,53 +11,31 @@ class DocumentCategoryListCreateAPIView(generics.ListCreateAPIView):
     queryset = DocumentCategory.objects.filter(is_deleted=False)
     serializer_class = DocumentCategorySerializer
 
-    @extend_schema(
-        summary="List all document categories",
-        responses=DocumentCategorySerializer(many=True),
-    )
+    @extend_schema(summary="List all document categories",responses=DocumentCategorySerializer(many=True),)
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    @extend_schema(
-        summary="Create a new document category",
-        request=DocumentCategorySerializer,
-        responses=DocumentCategorySerializer,
-    )
+    @extend_schema(summary="Create a new document category",request=DocumentCategorySerializer,responses=DocumentCategorySerializer,)
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
-
 
 class DocumentCategoryRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = DocumentCategory.objects.filter(is_deleted=False)
     serializer_class = DocumentCategorySerializer
 
-    @extend_schema(
-        summary="Retrieve a document category",
-        responses=DocumentCategorySerializer,
-    )
+    @extend_schema(summary="Retrieve a document category",responses=DocumentCategorySerializer,)
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    @extend_schema(
-        summary="Fully update a document category",
-        request=DocumentCategorySerializer,
-        responses=DocumentCategorySerializer,
-    )
+    @extend_schema(summary="Fully update a document category",request=DocumentCategorySerializer,responses=DocumentCategorySerializer,)
     def put(self, request, *args, **kwargs):
         return super().put(request, *args, **kwargs)
 
-    @extend_schema(
-        summary="Partially update a document category",
-        request=DocumentCategorySerializer,
-        responses=DocumentCategorySerializer,
-    )
+    @extend_schema(summary="Partially update a document category",request=DocumentCategorySerializer,responses=DocumentCategorySerializer,)
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
 
-    @extend_schema(
-        summary="Soft delete a document category",
-        responses={204: None},
-    )
+    @extend_schema(summary="Soft delete a document category",responses={204: None},)
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
 
@@ -71,10 +49,7 @@ class DocumentTypeListCreateAPIView(generics.ListCreateAPIView):
     queryset = DocumentType.objects.filter(is_deleted=False)
     serializer_class = DocumentTypeSerializer
 
-    @extend_schema(
-        summary="List all document types",
-        responses=DocumentTypeSerializer(many=True),
-    )
+    @extend_schema(summary="List all document types",responses=DocumentTypeSerializer(many=True),)
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
@@ -128,6 +103,27 @@ class DocumentTypeRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPI
         instance.is_deleted = True
         instance.save()
 
+    def perform_update(self, serializer):
+        old_instance = self.get_object()
+
+        was_active = old_instance.is_active
+        was_private_visible = old_instance.private_visible
+        was_public_visible = old_instance.public_visible
+
+        instance = serializer.save()
+
+        if (
+                was_active != instance.is_active or
+                was_private_visible != instance.private_visible or
+                was_public_visible != instance.public_visible
+        ):
+            if not (
+                    instance.is_active and
+                    (instance.private_visible or instance.public_visible)
+            ):
+                from .models import UploadedTextFile
+                UploadedTextFile.objects.filter(document_type=instance).delete()
+
 
 # Document Views
 class DocumentListCreateAPIView(generics.ListCreateAPIView):
@@ -148,6 +144,46 @@ class DocumentListCreateAPIView(generics.ListCreateAPIView):
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        doc_type = serializer.validated_data['document_type']
+        is_active = serializer.validated_data.get('is_active', False)
+
+        if is_active:
+            old_active_doc = Document.objects.filter(
+                document_type=doc_type,
+                is_active=True,
+                is_deleted=False
+            ).first()
+
+            if old_active_doc:
+                old_active_doc.is_active = False
+                old_active_doc.save()
+
+                if old_active_doc.document_type.public_visible or old_active_doc.document_type.private_visible:
+                    UploadedTextFile.objects.filter(document=old_active_doc).delete()
+
+        document = serializer.save()
+        file = document.file
+
+        if (
+                document.is_active and
+                (doc_type.public_visible or doc_type.private_visible) and
+                file.name.endswith(".pdf")
+        ):
+            try:
+                reader = PdfReader(file)
+                text = ""
+                for page in reader.pages:
+                    text += page.extract_text() or ""
+
+                UploadedTextFile.objects.create(
+                    document=document,
+                    document_type=doc_type,
+                    text=text
+                )
+            except Exception as e:
+                print(f"Error reading PDF: {e}")
 
 
 class DocumentRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -187,3 +223,4 @@ class DocumentRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView
     def perform_destroy(self, instance):
         instance.is_deleted = True
         instance.save()
+
