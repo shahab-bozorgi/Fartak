@@ -23,7 +23,7 @@ class DocumentCategoryService:
 
         if types_data is not None:
             sent_type_ids = [t.get('id') for t in types_data if t.get('id') is not None]
-
+    
             instance.types.exclude(id__in=sent_type_ids).delete()
 
             for type_data in types_data:

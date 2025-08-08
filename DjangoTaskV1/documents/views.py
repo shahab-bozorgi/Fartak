@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from PyPDF2 import PdfReader
 from .models import DocumentCategory, DocumentType, Document, UploadedTextFile
+from .pagination import CustomPagination
 from .schemas.type import  (
     document_type_list_schema,
     document_type_list_schema,
@@ -16,7 +17,7 @@ from .schemas.type import  (
 )
 from .serializers import DocumentCategorySerializer, DocumentTypeSerializer, DocumentSerializer, \
     CategoryWithDocTypeStatsSerializer
-from .services.category import DocumentCategoryService
+from .services.category import DocumentCategoryService, CategoryService
 from .schemas.category import (
     category_list_create_schema,
     category_create_schema,
@@ -41,6 +42,7 @@ from .services.type import DocumentTypeService
 class DocumentCategoryListCreateAPIView(generics.ListCreateAPIView):
     queryset = DocumentCategory.objects.filter(is_deleted=False)
     serializer_class = DocumentCategorySerializer
+    pagination_class = CustomPagination
 
     @category_list_create_schema
     def get(self, request, *args, **kwargs):
@@ -49,7 +51,6 @@ class DocumentCategoryListCreateAPIView(generics.ListCreateAPIView):
     @category_create_schema
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
-
 
 @category_list_with_filters_schema
 class DocumentCategoryRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -78,6 +79,8 @@ class DocumentCategoryRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestro
 class DocumentTypeListCreateAPIView(generics.ListCreateAPIView):
     queryset = DocumentType.objects.filter(is_deleted=False)
     serializer_class = DocumentTypeSerializer
+    pagination_class = CustomPagination
+
 
     @document_type_list_schema
     def get(self, request, *args, **kwargs):
@@ -89,7 +92,6 @@ class DocumentTypeListCreateAPIView(generics.ListCreateAPIView):
         if not DocumentTypeService.validate_category_exists(category_id):
             return Response({"category_id": ["Invalid or deleted category"]}, status=status.HTTP_400_BAD_REQUEST)
         return super().post(request, *args, **kwargs)
-
 
 class DocumentTypeRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = DocumentType.objects.filter(is_deleted=False)
@@ -122,6 +124,7 @@ class DocumentTypeRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPI
 class DocumentListCreateAPIView(generics.ListCreateAPIView):
     queryset = Document.objects.filter(is_deleted=False)
     serializer_class = DocumentSerializer
+    pagination_class = CustomPagination
 
     @document_list_schema
     def get(self, request, *args, **kwargs):
@@ -169,6 +172,8 @@ class DocumentRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView
 
 class CategoryWithTypeAndDocCountAPIView(generics.ListAPIView):
     serializer_class = CategoryWithDocTypeStatsSerializer
+    pagination_class = CustomPagination
+
 
     @category_with_type_and_count_schema
     def get(self, request, *args, **kwargs):

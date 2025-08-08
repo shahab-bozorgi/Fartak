@@ -1,6 +1,4 @@
 from PyPDF2 import PdfReader
-from rest_framework.exceptions import ValidationError
-
 from documents.models import Document, UploadedTextFile
 
 
