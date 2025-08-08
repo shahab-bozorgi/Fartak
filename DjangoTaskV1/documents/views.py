@@ -5,99 +5,88 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from PyPDF2 import PdfReader
 from .models import DocumentCategory, DocumentType, Document, UploadedTextFile
+from .schemas.type import  (
+    document_type_list_schema,
+    document_type_list_schema,
+    document_type_create_schema,
+    document_type_retrieve_schema,
+    document_type_update_schema,
+    document_type_partial_update_schema,
+    document_type_delete_schema,
+)
 from .serializers import DocumentCategorySerializer, DocumentTypeSerializer, DocumentSerializer, \
     CategoryWithDocTypeStatsSerializer
+from .services.category import DocumentCategoryService
+from .schemas.category import (
+    category_list_create_schema,
+    category_create_schema,
+    category_retrieve_schema,
+    category_update_schema,
+    category_partial_update_schema,
+    category_delete_schema,
+    category_list_with_filters_schema, category_with_type_and_count_schema,
+)
+from .schemas.document import (
+    document_list_schema,
+    document_create_schema,
+    document_retrieve_schema,
+    document_update_schema,
+    document_partial_update_schema,
+    document_delete_schema,
+)
+from .services.document import DocumentService
+from .services.type import DocumentTypeService
 
 
 class DocumentCategoryListCreateAPIView(generics.ListCreateAPIView):
     queryset = DocumentCategory.objects.filter(is_deleted=False)
     serializer_class = DocumentCategorySerializer
 
-    @extend_schema(summary="List all document categories",responses=DocumentCategorySerializer(many=True),)
+    @category_list_create_schema
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    @extend_schema(summary="Create a new document category",request=DocumentCategorySerializer,responses=DocumentCategorySerializer,)
+    @category_create_schema
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
 
-@extend_schema(
-    summary="List categories with document type and document count",
-    parameters=[
-        OpenApiParameter("participant_id", OpenApiTypes.INT, OpenApiParameter.QUERY),
-        OpenApiParameter("category_id", OpenApiTypes.INT, OpenApiParameter.QUERY),
-        OpenApiParameter("has_active_type", OpenApiTypes.BOOL, OpenApiParameter.QUERY),
-    ]
-)
-class CategoryWithTypeAndDocCountAPIView(generics.ListAPIView):
-    serializer_class = CategoryWithDocTypeStatsSerializer
 
-    def get_queryset(self):
-        queryset = DocumentCategory.objects.filter(is_deleted=False)
-
-        participant_id = self.request.query_params.get('participant_id')
-        if participant_id:
-            queryset = queryset.filter(participant_id=participant_id)
-
-        category_id = self.request.query_params.get('category_id')
-        if category_id:
-            queryset = queryset.filter(id=category_id)
-
-        has_active_type = self.request.query_params.get('has_active_type')
-        if has_active_type == 'true':
-            queryset = queryset.filter(
-                documenttype__is_active=True,
-                documenttype__is_deleted=False
-            ).distinct()
-
-        types = DocumentType.objects.filter(is_deleted=False).annotate(
-            document_count=Count('document', filter=Q(document__is_deleted=False))
-        )
-
-        return queryset.prefetch_related(Prefetch('documenttype_set', queryset=types))
-
-
+@category_list_with_filters_schema
 class DocumentCategoryRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = DocumentCategory.objects.filter(is_deleted=False)
     serializer_class = DocumentCategorySerializer
 
-    @extend_schema(summary="Retrieve a document category",responses=DocumentCategorySerializer,)
+    @category_retrieve_schema
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    @extend_schema(summary="Fully update a document category",request=DocumentCategorySerializer,responses=DocumentCategorySerializer,)
+    @category_update_schema
     def put(self, request, *args, **kwargs):
         return super().put(request, *args, **kwargs)
 
-    @extend_schema(summary="Partially update a document category",request=DocumentCategorySerializer,responses=DocumentCategorySerializer,)
+    @category_partial_update_schema
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
 
-    @extend_schema(summary="Soft delete a document category",responses={204: None},)
+    @category_delete_schema
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
 
     def perform_destroy(self, instance):
-        instance.is_deleted = True
-        instance.save()
-
+        DocumentCategoryService.soft_delete_category(instance)
 
 class DocumentTypeListCreateAPIView(generics.ListCreateAPIView):
     queryset = DocumentType.objects.filter(is_deleted=False)
     serializer_class = DocumentTypeSerializer
 
-    @extend_schema(summary="List all document types",responses=DocumentTypeSerializer(many=True),)
+    @document_type_list_schema
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    @extend_schema(
-        summary="Create a new document type",
-        request=DocumentTypeSerializer,
-        responses=DocumentTypeSerializer,
-    )
+    @document_type_create_schema
     def post(self, request, *args, **kwargs):
         category_id = request.data.get("category_id")
-        if not DocumentCategory.objects.filter(id=category_id, is_deleted=False).exists():
+        if not DocumentTypeService.validate_category_exists(category_id):
             return Response({"category_id": ["Invalid or deleted category"]}, status=status.HTTP_400_BAD_REQUEST)
         return super().post(request, *args, **kwargs)
 
@@ -106,78 +95,39 @@ class DocumentTypeRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPI
     queryset = DocumentType.objects.filter(is_deleted=False)
     serializer_class = DocumentTypeSerializer
 
-    @extend_schema(
-        summary="Retrieve a document type",
-        responses=DocumentTypeSerializer,
-    )
+    @document_type_retrieve_schema
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    @extend_schema(
-        summary="Fully update a document type",
-        request=DocumentTypeSerializer,
-        responses=DocumentTypeSerializer,
-    )
+    @document_type_update_schema
     def put(self, request, *args, **kwargs):
         return super().put(request, *args, **kwargs)
 
-    @extend_schema(
-        summary="Partially update a document type",
-        request=DocumentTypeSerializer,
-        responses=DocumentTypeSerializer,
-    )
+    @document_type_partial_update_schema
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
 
-    @extend_schema(
-        summary="Soft delete a document type",
-        responses={204: None},
-    )
+    @document_type_delete_schema
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
 
     def perform_destroy(self, instance):
-        instance.is_deleted = True
-        instance.save()
+        DocumentTypeService.soft_delete(instance)
 
     def perform_update(self, serializer):
         old_instance = self.get_object()
-
-        was_active = old_instance.is_active
-        was_private_visible = old_instance.private_visible
-        was_public_visible = old_instance.public_visible
-
-        instance = serializer.save()
-
-        if (
-                was_active != instance.is_active or
-                was_private_visible != instance.private_visible or
-                was_public_visible != instance.public_visible
-        ):
-            if not (
-                    instance.is_active and
-                    (instance.private_visible or instance.public_visible)
-            ):
-                from .models import UploadedTextFile
-                UploadedTextFile.objects.filter(document_type=instance).delete()
-
+        new_instance = serializer.save()
+        DocumentTypeService.cleanup_uploaded_text_if_visibility_removed(old_instance, new_instance)
 
 class DocumentListCreateAPIView(generics.ListCreateAPIView):
     queryset = Document.objects.filter(is_deleted=False)
     serializer_class = DocumentSerializer
 
-    @extend_schema(
-        summary="List all documents",
-        responses=DocumentSerializer(many=True),
-    )
+    @document_list_schema
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    @extend_schema(
-        summary="Create a new document",
-        request=DocumentSerializer,
-        responses=DocumentSerializer,
-    )
+    @document_create_schema
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
 
@@ -186,77 +136,51 @@ class DocumentListCreateAPIView(generics.ListCreateAPIView):
         is_active = serializer.validated_data.get('is_active', False)
 
         if is_active:
-            old_active_doc = Document.objects.filter(
-                document_type=doc_type,
-                is_active=True,
-                is_deleted=False
-            ).first()
-
-            if old_active_doc:
-                old_active_doc.is_active = False
-                old_active_doc.save()
-
-                if old_active_doc.document_type.public_visible or old_active_doc.document_type.private_visible:
-                    UploadedTextFile.objects.filter(document=old_active_doc).delete()
+            DocumentService.ensure_single_active(doc_type)
 
         document = serializer.save()
-        file = document.file
-
-        if (
-                document.is_active and
-                (doc_type.public_visible or doc_type.private_visible) and
-                file.name.endswith(".pdf")
-        ):
-            try:
-                reader = PdfReader(file)
-                text = ""
-                for page in reader.pages:
-                    text += page.extract_text() or ""
-
-                UploadedTextFile.objects.create(
-                    document=document,
-                    document_type=doc_type,
-                    text=text
-                )
-            except Exception as e:
-                print(f"Error reading PDF: {e}")
+        DocumentService.save_uploaded_text(document)
 
 
 class DocumentRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Document.objects.filter(is_deleted=False)
     serializer_class = DocumentSerializer
 
-    @extend_schema(
-        summary="Retrieve a document",
-        responses=DocumentSerializer,
-    )
+    @document_retrieve_schema
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    @extend_schema(
-        summary="Fully update a document",
-        request=DocumentSerializer,
-        responses=DocumentSerializer,
-    )
+    @document_update_schema
     def put(self, request, *args, **kwargs):
         return super().put(request, *args, **kwargs)
 
-    @extend_schema(
-        summary="Partially update a document",
-        request=DocumentSerializer,
-        responses=DocumentSerializer,
-    )
+    @document_partial_update_schema
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
 
-    @extend_schema(
-        summary="Soft delete a document",
-        responses={204: None},
-    )
+    @document_delete_schema
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
 
     def perform_destroy(self, instance):
-        instance.is_deleted = True
-        instance.save()
+        DocumentService.soft_delete(instance)
 
+
+
+class CategoryWithTypeAndDocCountAPIView(generics.ListAPIView):
+    serializer_class = CategoryWithDocTypeStatsSerializer
+
+    @category_with_type_and_count_schema
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        participant_id = self.request.query_params.get('participant_id')
+        category_id = self.request.query_params.get('category_id')
+        has_active_type = self.request.query_params.get('has_active_type')
+
+        return CategoryService.get_filtered_categories_with_types(
+            participant_id=participant_id,
+            category_id=category_id,
+            has_active_type=has_active_type
+        )

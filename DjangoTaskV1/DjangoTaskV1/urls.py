@@ -27,17 +27,17 @@ urlpatterns = [
     path('documents/', include('documents.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path(
-        'api/swagger/',
+        'api/schemas/',
         SpectacularSwaggerView.as_view(url_name='schema'),
-        name='swagger-ui',
+        name='schemas-ui',
     ),
     path(
-        'api/swagger.yaml',
+        'api/schemas.yaml',
         TemplateView.as_view(
-            template_name='Swagger/swagger.yaml',
+            template_name='Swagger/schemas.yaml',
             content_type='application/yaml',
         ),
-        name='swagger-yaml',
+        name='schemas-yaml',
     ),
 
 ]
