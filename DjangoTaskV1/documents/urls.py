@@ -6,7 +6,7 @@ from .views import (
     DocumentTypeListCreateAPIView,
     DocumentTypeRetrieveUpdateDestroyAPIView,
     DocumentListCreateAPIView,
-    DocumentRetrieveUpdateDestroyAPIView,
+    DocumentRetrieveUpdateDestroyAPIView, CategoryWithTypeAndDocCountAPIView,
 )
 
 urlpatterns = [
@@ -19,4 +19,5 @@ urlpatterns = [
 
     path("documents/", DocumentListCreateAPIView.as_view(), name="document-list-create"),
     path("documents/<int:pk>/", DocumentRetrieveUpdateDestroyAPIView.as_view(), name="document-detail"),
+    path('category-doc-type-stats/', CategoryWithTypeAndDocCountAPIView.as_view(), name='category-doc-type-stats'),
 ]

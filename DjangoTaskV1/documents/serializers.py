@@ -9,6 +9,7 @@ class DocumentTypeSerializer(serializers.ModelSerializer):
         write_only=True
     )
     category = serializers.StringRelatedField(read_only=True)
+    document_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = DocumentType
@@ -19,6 +20,7 @@ class DocumentTypeSerializer(serializers.ModelSerializer):
             'title',
             'private_visible',
             'public_visible',
+            'document_count',
             'is_active',
             'is_deleted',
         ]
@@ -30,10 +32,11 @@ class DocumentTypeSerializer(serializers.ModelSerializer):
 
 class DocumentCategorySerializer(serializers.ModelSerializer):
     types = DocumentTypeSerializer(many=True, write_only=True)
+    document_types = DocumentTypeSerializer(source='types', many=True, read_only=True)
 
     class Meta:
         model = DocumentCategory
-        fields = ['id', 'company', 'participant', 'title', 'is_deleted', 'types']
+        fields = ['id', 'company', 'participant', 'title', 'is_deleted', 'types', 'document_types']
         read_only_fields = ['id', 'is_deleted']
 
     def create(self, validated_data):
@@ -102,3 +105,21 @@ class DocumentSerializer(serializers.ModelSerializer):
             validated_data['is_active'] = validated_data.get('is_active', False)
 
         return super().create(validated_data)
+
+class DocumentTypeWithCountSerializer(serializers.ModelSerializer):
+    document_count = serializers.IntegerField()
+
+    class Meta:
+        model = DocumentType
+        fields = ['id', 'title', 'is_active', 'public_visible', 'private_visible', 'document_count']
+
+class CategoryWithDocTypeStatsSerializer(serializers.ModelSerializer):
+    types = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DocumentCategory
+        fields = ['id', 'title', 'participant', 'company', 'types']
+
+    def get_types(self, obj):
+        types = getattr(obj, 'documenttype_set', [])
+        return DocumentTypeWithCountSerializer(types, many=True).data

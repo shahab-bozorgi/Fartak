@@ -1,12 +1,14 @@
+from django.db.models import Count, Q, Prefetch
+from drf_spectacular.types import OpenApiTypes
 from rest_framework import generics, status
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from PyPDF2 import PdfReader
 from .models import DocumentCategory, DocumentType, Document, UploadedTextFile
-from .serializers import DocumentCategorySerializer, DocumentTypeSerializer, DocumentSerializer
+from .serializers import DocumentCategorySerializer, DocumentTypeSerializer, DocumentSerializer, \
+    CategoryWithDocTypeStatsSerializer
 
 
-# DocumentCategory Views
 class DocumentCategoryListCreateAPIView(generics.ListCreateAPIView):
     queryset = DocumentCategory.objects.filter(is_deleted=False)
     serializer_class = DocumentCategorySerializer
@@ -18,6 +20,42 @@ class DocumentCategoryListCreateAPIView(generics.ListCreateAPIView):
     @extend_schema(summary="Create a new document category",request=DocumentCategorySerializer,responses=DocumentCategorySerializer,)
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
+
+@extend_schema(
+    summary="List categories with document type and document count",
+    parameters=[
+        OpenApiParameter("participant_id", OpenApiTypes.INT, OpenApiParameter.QUERY),
+        OpenApiParameter("category_id", OpenApiTypes.INT, OpenApiParameter.QUERY),
+        OpenApiParameter("has_active_type", OpenApiTypes.BOOL, OpenApiParameter.QUERY),
+    ]
+)
+class CategoryWithTypeAndDocCountAPIView(generics.ListAPIView):
+    serializer_class = CategoryWithDocTypeStatsSerializer
+
+    def get_queryset(self):
+        queryset = DocumentCategory.objects.filter(is_deleted=False)
+
+        participant_id = self.request.query_params.get('participant_id')
+        if participant_id:
+            queryset = queryset.filter(participant_id=participant_id)
+
+        category_id = self.request.query_params.get('category_id')
+        if category_id:
+            queryset = queryset.filter(id=category_id)
+
+        has_active_type = self.request.query_params.get('has_active_type')
+        if has_active_type == 'true':
+            queryset = queryset.filter(
+                documenttype__is_active=True,
+                documenttype__is_deleted=False
+            ).distinct()
+
+        types = DocumentType.objects.filter(is_deleted=False).annotate(
+            document_count=Count('document', filter=Q(document__is_deleted=False))
+        )
+
+        return queryset.prefetch_related(Prefetch('documenttype_set', queryset=types))
+
 
 class DocumentCategoryRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = DocumentCategory.objects.filter(is_deleted=False)
@@ -44,7 +82,6 @@ class DocumentCategoryRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestro
         instance.save()
 
 
-# DocumentType Views
 class DocumentTypeListCreateAPIView(generics.ListCreateAPIView):
     queryset = DocumentType.objects.filter(is_deleted=False)
     serializer_class = DocumentTypeSerializer
@@ -125,7 +162,6 @@ class DocumentTypeRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPI
                 UploadedTextFile.objects.filter(document_type=instance).delete()
 
 
-# Document Views
 class DocumentListCreateAPIView(generics.ListCreateAPIView):
     queryset = Document.objects.filter(is_deleted=False)
     serializer_class = DocumentSerializer
