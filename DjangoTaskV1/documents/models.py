@@ -41,7 +41,7 @@ class Document(models.Model):
     company = models.IntegerField()
     participant = models.ForeignKey(Participant, on_delete=models.CASCADE)
     document_type = models.ForeignKey(DocumentType, on_delete=models.CASCADE)
-    file = models.FileField()
+    file = models.FileField(upload_to='files/documents')
     is_active = models.BooleanField()
     is_deleted = models.BooleanField(default=False)
 
