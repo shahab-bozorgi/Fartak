@@ -39,7 +39,7 @@ class DocumentType(models.Model):
 
 class Document(models.Model):
     company = models.IntegerField()
-    participant = models.ForeignKey(Participant, on_delete=models.CASCADE)
+    participant = models.ForeignKey(Participant, on_delete=models.CASCADE, related_name='document')
     document_type = models.ForeignKey(DocumentType, on_delete=models.CASCADE)
     file = models.FileField(upload_to='files/documents')
     is_active = models.BooleanField()

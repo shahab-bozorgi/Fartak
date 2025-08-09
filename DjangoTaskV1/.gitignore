@@ -8,12 +8,11 @@ migrations/
 **/static/**
 static/
 staticfiles/
-./files
 /.venv1
 .venv
 env
-
 ../.README.md.swp
+files/documents
 
 /static
 # Byte-compiled / optimized / DLL files

@@ -113,5 +113,4 @@ class CategoryWithDocTypeStatsSerializer(serializers.ModelSerializer):
         ]
 
     def get_types(self, obj):
-        types = getattr(obj, 'documenttype_set', [])
-        return DocumentTypeWithCountSerializer(types, many=True).data
+        return DocumentTypeWithCountSerializer(obj.types.all(), many=True).data

@@ -63,8 +63,8 @@ class CategoryService:
 
         if has_active_type == 'true':
             queryset = queryset.filter(
-                documenttype__is_active=True,
-                documenttype__is_deleted=False
+                types__is_active=True,
+                types__is_deleted=False
             ).distinct()
 
         annotated_types = DocumentType.objects.filter(is_deleted=False).annotate(
@@ -72,5 +72,5 @@ class CategoryService:
         )
 
         return queryset.prefetch_related(
-            Prefetch('documenttype_set', queryset=annotated_types)
+            Prefetch('types', queryset=annotated_types)
         )
