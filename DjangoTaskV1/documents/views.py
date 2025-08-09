@@ -52,7 +52,6 @@ class DocumentCategoryListCreateAPIView(generics.ListCreateAPIView):
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
 
-@category_list_with_filters_schema
 class DocumentCategoryRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = DocumentCategory.objects.filter(is_deleted=False)
     serializer_class = DocumentCategorySerializer

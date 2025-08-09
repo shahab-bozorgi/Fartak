@@ -1,8 +1,11 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from documents.models import Document, DocumentCategory, DocumentType
 from documents.services.category import DocumentCategoryService
 
+class DocumentRequestId(serializers.Serializer):
+    id = serializers.IntegerField()
 
 class DocumentTypeSerializer(serializers.ModelSerializer):
     category_id = serializers.PrimaryKeyRelatedField(
@@ -27,6 +30,11 @@ class DocumentTypeSerializer(serializers.ModelSerializer):
             'is_deleted',
         ]
         read_only_fields = ['id', 'is_deleted']
+
+class GetDocumentCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DocumentCategory
+        fields = ['id', 'company', 'participant', 'title', 'is_deleted']
 
 class DocumentCategorySerializer(serializers.ModelSerializer):
     types = DocumentTypeSerializer(many=True, write_only=True)

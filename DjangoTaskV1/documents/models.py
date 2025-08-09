@@ -26,7 +26,7 @@ class DocumentCategory (models.Model):
         return f"{self.company} {self.participant} {self.title}"
 
 class DocumentType(models.Model):
-    category = models.ForeignKey(DocumentCategory, on_delete=models.CASCADE)
+    category = models.ForeignKey(DocumentCategory, on_delete=models.CASCADE, related_name='types')
     title = models.CharField(max_length=100)
     private_visible = models.BooleanField()
     public_visible = models.BooleanField()

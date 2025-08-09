@@ -1,8 +1,7 @@
-# documents/schemas/category_schemas.py
-
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
-from documents.serializers import DocumentCategorySerializer, CategoryWithDocTypeStatsSerializer
+from documents.serializers import DocumentCategorySerializer, CategoryWithDocTypeStatsSerializer, \
+    GetDocumentCategorySerializer
 
 category_list_create_schema = extend_schema(
     summary="List all document categories",
@@ -17,7 +16,7 @@ category_create_schema = extend_schema(
 
 category_retrieve_schema = extend_schema(
     summary="Retrieve a document category",
-    responses=DocumentCategorySerializer
+    responses=GetDocumentCategorySerializer
 )
 
 category_update_schema = extend_schema(
