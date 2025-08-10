@@ -2,6 +2,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
 from documents.models import Document, DocumentType, Participant, DocumentCategory
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 class DocumentAPITestCase(APITestCase):
     def setUp(self):

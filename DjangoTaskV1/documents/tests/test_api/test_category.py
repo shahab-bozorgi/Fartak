@@ -30,6 +30,9 @@ class DocumentCategoryAPITestCase(APITestCase):
             is_deleted=False
         )
 
+    def get_queryset(self):
+        return DocumentCategory.objects.filter(is_deleted=False).order_by('id')
+
     def test_list_categories(self):
         url = reverse('document-category-list-create')
         response = self.client.get(url)
@@ -39,6 +42,9 @@ class DocumentCategoryAPITestCase(APITestCase):
     def test_create_category_with_types(self):
         url = reverse('document-category-list-create')
         response = self.client.post(url, self.category_data, format='json')
+        print(response.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['title'], self.category_data['title'])
         self.assertEqual(len(response.data['types']), 1)
@@ -65,7 +71,10 @@ class DocumentCategoryAPITestCase(APITestCase):
                 }
             ]
         }
-        response = self.client.put(url, new_data, format='json')
+        response = self.client.post(url, self.category_data, format='json')
+        print(response.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['title'], "Updated Title")
         self.assertEqual(response.data['types'][0]['title'], "Updated Type")
